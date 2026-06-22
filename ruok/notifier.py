@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import re
 from dataclasses import dataclass
 from typing import Protocol
 
@@ -19,9 +20,12 @@ class NotificationSink(Protocol):
 
 
 def notification_from_record(record: AdviceRecord) -> NotificationMessage:
-    title = f"RUOK: {record.summary}"
-    subtitle = f"{record.changed_percent:.1f}% changed · {record.model}"
-    body = _compact(record.advice, limit=220)
+    title = "助言"
+    subtitle = f"{record.summary} · {record.changed_percent:.1f}% · {_model_label(record.model)}"
+    body = _compact(
+        _format_advice_body(record.advice, preserve_diagnostics=record.model.startswith("fallback:")),
+        limit=260,
+    )
     return NotificationMessage(title=title, subtitle=subtitle, body=body)
 
 
@@ -59,6 +63,61 @@ def _compact(text: str, limit: int) -> str:
     if len(normalized) <= limit:
         return normalized
     return normalized[: limit - 3].rstrip() + "..."
+
+
+def _format_advice_body(advice: str, preserve_diagnostics: bool = False) -> str:
+    if preserve_diagnostics:
+        return _format_diagnostic_body(advice)
+
+    sections = _extract_advice_sections(advice)
+    next_action = sections.get("次の一手")
+    if not next_action:
+        return advice
+
+    lines = [f"次の一手: {next_action}"]
+    if situation := sections.get("状況"):
+        lines.append(f"状況: {situation}")
+    if caution := sections.get("注意"):
+        lines.append(f"注意: {caution}")
+    return "\n".join(lines)
+
+
+def _format_diagnostic_body(advice: str) -> str:
+    lines = _nonempty_lines(advice)
+    diagnostic = next(
+        (line for line in lines if "ローカルLLM" in line or "詳細:" in line),
+        None,
+    )
+    if not diagnostic:
+        return advice
+
+    sections = _extract_advice_sections(advice)
+    body = [diagnostic]
+    if next_action := sections.get("次の一手"):
+        body.append(f"次の一手: {next_action}")
+    return "\n".join(body)
+
+
+def _extract_advice_sections(advice: str) -> dict[str, str]:
+    sections: dict[str, str] = {}
+    for raw_line in advice.splitlines():
+        line = re.sub(r"^\s*\d+[.)]\s*", "", raw_line.strip())
+        for label in ("状況", "注意", "次の一手"):
+            match = re.match(rf"^{label}\s*[:：]\s*(.+)$", line)
+            if match:
+                sections[label] = match.group(1).strip()
+                break
+    return sections
+
+
+def _nonempty_lines(text: str) -> list[str]:
+    return [line.strip() for line in text.splitlines() if line.strip()]
+
+
+def _model_label(model: str) -> str:
+    if model.startswith("fallback:"):
+        return "LLM未接続"
+    return model
 
 
 def _pync_notifier():
