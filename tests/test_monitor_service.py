@@ -41,6 +41,15 @@ class FakeNotifier:
         self.records.append(record)
 
 
+class RecordingCompressor:
+    def __init__(self) -> None:
+        self.directories: list[Path] = []
+
+    def compress_directory(self, directory: Path) -> int:
+        self.directories.append(directory)
+        return 0
+
+
 @pytest.mark.asyncio
 async def test_monitor_service_creates_records_with_previous_screenshot(tmp_path: Path) -> None:
     store = RunStore(tmp_path)
@@ -63,6 +72,24 @@ async def test_monitor_service_creates_records_with_previous_screenshot(tmp_path
     assert advisor.calls[0][0] is None
     assert advisor.calls[1][0] is not None
     assert [record.id for record in notifier.records] == [first.id, second.id]
+
+
+@pytest.mark.asyncio
+async def test_monitor_service_compresses_accumulated_screenshots_before_capture(
+    tmp_path: Path,
+) -> None:
+    store = RunStore(tmp_path)
+    compressor = RecordingCompressor()
+    service = MonitorService(
+        store=store,
+        capturer=FakeCapturer(),
+        advisor=FakeAdvisor(),
+        screenshot_compressor=compressor,
+    )
+
+    await service.run_once()
+
+    assert compressor.directories == [store.screenshots_dir]
 
 
 @pytest.mark.asyncio

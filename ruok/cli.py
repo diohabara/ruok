@@ -7,6 +7,7 @@ from collections.abc import Sequence
 from pathlib import Path
 
 from ruok.capture import MssScreenshotCapturer
+from ruok.image_storage import DEFAULT_MAX_SCREENSHOT_EDGE, ScreenshotStorageOptimizer
 from ruok.notifier import (
     ConsoleNotificationSink,
     DesktopNotificationSink,
@@ -23,6 +24,12 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--data-dir", default=os.getenv("RUOK_DATA_DIR", "data"))
     parser.add_argument("--interval", type=int, default=int(os.getenv("RUOK_INTERVAL_SECONDS", "300")))
     parser.add_argument("--model", default=os.getenv("RUOK_OLLAMA_MODEL", "qwen2.5vl:7b"))
+    parser.add_argument(
+        "--max-screenshot-edge",
+        type=int,
+        default=int(os.getenv("RUOK_MAX_SCREENSHOT_EDGE", str(DEFAULT_MAX_SCREENSHOT_EDGE))),
+        help="Downscale stored screenshots when their longest edge exceeds this size.",
+    )
     parser.add_argument(
         "--ollama-endpoint",
         default=os.getenv("RUOK_OLLAMA_ENDPOINT", "http://localhost:11434"),
@@ -41,6 +48,8 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     args = parser.parse_args(argv)
     if args.interval <= 0:
         parser.error("--interval must be a positive integer")
+    if args.max_screenshot_edge <= 0:
+        parser.error("--max-screenshot-edge must be a positive integer")
     return args
 
 
@@ -70,9 +79,10 @@ def build_service(args: argparse.Namespace) -> MonitorService:
     notifier = _notifier(console=args.console)
     return MonitorService(
         store=RunStore(Path(args.data_dir)),
-        capturer=MssScreenshotCapturer(),
+        capturer=MssScreenshotCapturer(max_edge=args.max_screenshot_edge),
         advisor=OllamaVisionAdvisor(model=args.model, endpoint=args.ollama_endpoint),
         notifier=notifier,
+        screenshot_compressor=ScreenshotStorageOptimizer(max_edge=args.max_screenshot_edge),
     )
 
 

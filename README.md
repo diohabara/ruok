@@ -39,6 +39,7 @@ uv run ruok --once --console
 
 ```bash
 uv run ruok --interval 300 --model qwen2.5vl:7b --data-dir data
+uv run ruok --max-screenshot-edge 1600
 uv run ruok --once
 uv run ruok --console
 uv run ruok --no-immediate
@@ -50,6 +51,7 @@ Environment variables are also supported:
 RUOK_INTERVAL_SECONDS=300 \
 RUOK_OLLAMA_MODEL=qwen2.5vl:7b \
 RUOK_OLLAMA_ENDPOINT=http://localhost:11434 \
+RUOK_MAX_SCREENSHOT_EDGE=1600 \
 uv run ruok
 ```
 
@@ -73,8 +75,8 @@ launchctl bootout "gui/$(id -u)/local.ruok.monitor"
 ```
 
 The installer respects `RUOK_INTERVAL_SECONDS`, `RUOK_OLLAMA_MODEL`,
-`RUOK_OLLAMA_ENDPOINT`, `RUOK_LAUNCHD_LABEL`, and `UV_BIN` when generating the
-plist.
+`RUOK_OLLAMA_ENDPOINT`, `RUOK_MAX_SCREENSHOT_EDGE`, `RUOK_LAUNCHD_LABEL`, and
+`UV_BIN` when generating the plist.
 
 ## Data
 
@@ -85,6 +87,10 @@ Screenshots and advice logs are stored under `data/` by default:
 
 These files may contain sensitive screen content. Keep them local or add your own
 retention policy before sharing the directory.
+
+Stored screenshots are downscaled when their longest edge exceeds 1600 pixels by
+default. RUOK also checks the existing screenshot directory before each run, so
+oversized accumulated screenshots are compacted over time.
 
 ## Local Development
 

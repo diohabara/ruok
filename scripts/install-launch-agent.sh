@@ -8,6 +8,7 @@ UV_BIN="$(cd "$(dirname "${UV_BIN}")" && pwd -P)/$(basename "${UV_BIN}")"
 MODEL="${RUOK_OLLAMA_MODEL:-qwen2.5vl:7b}"
 ENDPOINT="${RUOK_OLLAMA_ENDPOINT:-http://127.0.0.1:11434}"
 INTERVAL="${RUOK_INTERVAL_SECONDS:-300}"
+MAX_SCREENSHOT_EDGE="${RUOK_MAX_SCREENSHOT_EDGE:-1600}"
 LAUNCH_AGENTS_DIR="${HOME}/Library/LaunchAgents"
 PLIST_PATH="${LAUNCH_AGENTS_DIR}/${LABEL}.plist"
 
@@ -19,6 +20,7 @@ UV_BIN="${UV_BIN}" \
 MODEL="${MODEL}" \
 ENDPOINT="${ENDPOINT}" \
 INTERVAL="${INTERVAL}" \
+MAX_SCREENSHOT_EDGE="${MAX_SCREENSHOT_EDGE}" \
 PLIST_PATH="${PLIST_PATH}" \
 "${UV_BIN}" run python - <<'PY'
 from __future__ import annotations
@@ -40,6 +42,8 @@ plist = {
         os.environ["ENDPOINT"],
         "--interval",
         os.environ["INTERVAL"],
+        "--max-screenshot-edge",
+        os.environ["MAX_SCREENSHOT_EDGE"],
     ],
     "WorkingDirectory": str(root_dir),
     "EnvironmentVariables": {

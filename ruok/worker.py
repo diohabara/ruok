@@ -25,6 +25,10 @@ class VisionAdvisor(Protocol):
     ) -> str: ...
 
 
+class ScreenshotDirectoryCompressor(Protocol):
+    def compress_directory(self, directory: Path) -> int: ...
+
+
 class MonitorService:
     def __init__(
         self,
@@ -32,15 +36,18 @@ class MonitorService:
         capturer: ScreenshotCapturer,
         advisor: VisionAdvisor,
         notifier: NotificationSink | None = None,
+        screenshot_compressor: ScreenshotDirectoryCompressor | None = None,
     ) -> None:
         self.store = store
         self.capturer = capturer
         self.advisor = advisor
         self.notifier = notifier
+        self.screenshot_compressor = screenshot_compressor
         self._lock = asyncio.Lock()
 
     async def run_once(self) -> AdviceRecord:
         async with self._lock:
+            self._compress_existing_screenshots()
             created_at = datetime.now().astimezone()
             record_id = f"{created_at.strftime('%Y%m%d-%H%M%S')}-{uuid4().hex[:8]}"
             current_path = self.store.screenshots_dir / f"{record_id}.png"
@@ -94,6 +101,14 @@ class MonitorService:
             return
         try:
             await self.notifier.notify(record)
+        except Exception:
+            return
+
+    def _compress_existing_screenshots(self) -> None:
+        if self.screenshot_compressor is None:
+            return
+        try:
+            self.screenshot_compressor.compress_directory(self.store.screenshots_dir)
         except Exception:
             return
 
