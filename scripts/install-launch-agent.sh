@@ -1,7 +1,8 @@
 #!/bin/sh
 set -eu
 
-LABEL="${RUOK_LAUNCHD_LABEL:-local.ruok.monitor}"
+LABEL="${RUOK_LAUNCHD_LABEL:-io.github.diohabara.ruok.monitor}"
+LEGACY_LABEL="local.ruok.monitor"
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd -P)"
 UV_BIN="${UV_BIN:-$(command -v uv)}"
 UV_BIN="$(cd "$(dirname "${UV_BIN}")" && pwd -P)/$(basename "${UV_BIN}")"
@@ -11,6 +12,7 @@ INTERVAL="${RUOK_INTERVAL_SECONDS:-300}"
 MAX_SCREENSHOT_EDGE="${RUOK_MAX_SCREENSHOT_EDGE:-1600}"
 LAUNCH_AGENTS_DIR="${HOME}/Library/LaunchAgents"
 PLIST_PATH="${LAUNCH_AGENTS_DIR}/${LABEL}.plist"
+LEGACY_PLIST_PATH="${LAUNCH_AGENTS_DIR}/${LEGACY_LABEL}.plist"
 
 mkdir -p "${ROOT_DIR}/logs" "${LAUNCH_AGENTS_DIR}"
 
@@ -64,6 +66,10 @@ with Path(os.environ["PLIST_PATH"]).open("wb") as file:
 PY
 
 plutil -lint "${PLIST_PATH}"
+if [ "${LABEL}" != "${LEGACY_LABEL}" ]; then
+  launchctl bootout "gui/$(id -u)/${LEGACY_LABEL}" 2>/dev/null || true
+  rm -f "${LEGACY_PLIST_PATH}"
+fi
 launchctl bootout "gui/$(id -u)/${LABEL}" 2>/dev/null || true
 launchctl bootstrap "gui/$(id -u)" "${PLIST_PATH}"
 launchctl print "gui/$(id -u)/${LABEL}" | sed -n '1,80p'

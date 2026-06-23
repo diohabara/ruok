@@ -8,16 +8,42 @@ The default local LLM backend is an Ollama-compatible API.
 
 ## Requirements
 
-- macOS, Linux, or another desktop environment supported by `mss`
-- Python 3.11+
-- `uv`
+- macOS 13+ for the native menu bar app
+- Xcode Command Line Tools or another Swift toolchain for building the app
 - Ollama running locally
 - A vision-capable Ollama model, for example `qwen2.5vl:7b` or `llava`
 
-On macOS, the terminal app that runs RUOK needs Screen Recording permission and
+On macOS, the app that starts RUOK needs Screen Recording permission and
 notification permission.
 
-## Run
+The Python CLI is still available for non-menu-bar use and requires Python 3.11+
+and `uv`.
+
+## macOS Menu Bar App
+
+Build and open the native Swift/AppKit menu bar app:
+
+```bash
+scripts/build-menu-bar-app.sh
+open dist/RUOK.app
+```
+
+The app appears in the macOS menu bar and does not start monitoring until you
+choose `開始`. The monitoring loop, screenshot capture, screenshot compression,
+Ollama API call, image comparison, and notifications are implemented in Swift.
+
+Menu actions:
+
+- `開始`: run RUOK every `RUOK_INTERVAL_SECONDS` seconds, defaulting to 300.
+- `停止`: stop the background monitor.
+- `今すぐ1回実行`: take one screenshot and send one notification.
+- `データフォルダを開く`: open the native app data directory.
+- `ログを開く`: open `~/Library/Logs/RUOK/ruok.menubar.log`.
+
+By default, the app stores data under `~/Library/Application Support/RUOK/data`.
+Set `RUOK_DATA_DIR` to override it.
+
+## Python CLI
 
 ```bash
 ollama serve
@@ -55,8 +81,8 @@ RUOK_MAX_SCREENSHOT_EDGE=1600 \
 uv run ruok
 ```
 
-Notifications use the `pync` Python package on macOS. `--console` is available as
-a fallback when desktop notifications are blocked by OS settings.
+Python CLI notifications use the `pync` package on macOS. `--console` is
+available as a fallback when desktop notifications are blocked by OS settings.
 
 ## macOS LaunchAgent
 
@@ -65,13 +91,13 @@ checkout and start RUOK in the background:
 
 ```bash
 scripts/install-launch-agent.sh
-launchctl print "gui/$(id -u)/local.ruok.monitor"
+launchctl print "gui/$(id -u)/io.github.diohabara.ruok.monitor"
 ```
 
 Stop it with:
 
 ```bash
-launchctl bootout "gui/$(id -u)/local.ruok.monitor"
+launchctl bootout "gui/$(id -u)/io.github.diohabara.ruok.monitor"
 ```
 
 The installer respects `RUOK_INTERVAL_SECONDS`, `RUOK_OLLAMA_MODEL`,
@@ -80,7 +106,9 @@ The installer respects `RUOK_INTERVAL_SECONDS`, `RUOK_OLLAMA_MODEL`,
 
 ## Data
 
-Screenshots and advice logs are stored under `data/` by default:
+The native menu bar app stores screenshots and advice logs under
+`~/Library/Application Support/RUOK/data` by default. The Python CLI stores them
+under `data/` by default:
 
 - `data/screenshots/*.png`
 - `data/records.jsonl`
