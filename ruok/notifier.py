@@ -20,10 +20,11 @@ class NotificationSink(Protocol):
 
 
 def notification_from_record(record: AdviceRecord) -> NotificationMessage:
-    title = "助言"
+    is_fallback = record.model.startswith("fallback:")
+    title = _action_title(record.advice, is_fallback=is_fallback)
     subtitle = f"{record.summary} · {record.changed_percent:.1f}% · {_model_label(record.model)}"
     body = _compact(
-        _format_advice_body(record.advice, preserve_diagnostics=record.model.startswith("fallback:")),
+        _format_advice_body(record.advice, preserve_diagnostics=is_fallback),
         limit=260,
     )
     return NotificationMessage(title=title, subtitle=subtitle, body=body)
@@ -96,6 +97,23 @@ def _format_diagnostic_body(advice: str) -> str:
     if next_action := sections.get("次の一手"):
         body.append(f"次の一手: {next_action}")
     return "\n".join(body)
+
+
+def _action_title(advice: str, is_fallback: bool = False) -> str:
+    if is_fallback:
+        return "Ollama接続を確認しましょう"
+
+    sections = _extract_advice_sections(advice)
+    if next_action := sections.get("次の一手"):
+        return _compact_title(next_action)
+    return "次の小さな行動を決めましょう"
+
+
+def _compact_title(text: str, limit: int = 34) -> str:
+    title = re.sub(r"[。.!！]+$", "", text.strip())
+    if len(title) <= limit:
+        return title
+    return title[: limit - 1].rstrip() + "…"
 
 
 def _extract_advice_sections(advice: str) -> dict[str, str]:

@@ -32,7 +32,7 @@ def test_notification_message_uses_advice_summary_and_next_action() -> None:
 
     message = notification_from_record(record)
 
-    assert message.title == "助言"
+    assert message.title == "いま書く1行を決めて戻りましょう"
     assert message.subtitle == "小さな変化があります。 · 12.5% · qwen2.5vl:7b"
     assert message.body.startswith("次の一手: いま書く1行を決めて戻りましょう。")
     assert "状況: エディタからブラウザへ移動しました。" in message.body
@@ -57,7 +57,7 @@ def test_notification_message_marks_fallback_model_as_disconnected() -> None:
 
     message = notification_from_record(fallback_record)
 
-    assert message.title == "助言"
+    assert message.title == "Ollama接続を確認しましょう"
     assert message.subtitle == "小さな変化があります。 · 12.5% · LLM未接続"
     assert "ローカルLLMから助言を取得できませんでした。" in message.body
     assert "Ollama refused connection" in message.body

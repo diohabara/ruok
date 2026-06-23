@@ -34,6 +34,8 @@ def test_ollama_payload_sends_two_screenshots_and_no_streaming(tmp_path: Path) -
     assert base64.b64decode(message["images"][0])
     assert "42.5%" in message["content"]
     assert "日本語" in message["content"]
+    assert "通知タイトル" in message["content"]
+    assert "5分以内" in message["content"]
 
 
 def test_ollama_client_uses_short_connect_timeout() -> None:
